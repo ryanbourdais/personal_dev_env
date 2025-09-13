@@ -1,36 +1,38 @@
-# Running this container
+# Dev Environment Setup
 
-## Building the image
+This repository provides multiple ways to set up a development environment on Windows, Linux, or macOS, using **Docker**, **WSL2**, or a fully automated **Packer GUI VM**.
 
-From the directory containing the Dockerfile, build the image with:
+---
+
+## 1. Docker-Based Development Environment
+
+### Building the Docker Image
+
+From the directory containing the Dockerfile (`Dockerfile` or `Dockerfile.gui`), build the image with:
 
 ```bash
 docker build -t <image-name> .
 ```
 
-## Running this container
+### Running the Docker Container
 
-### Linux / macOS
+#### Linux / macOS
 
-To run this image with a directory from your host mounted into the container’s working directory (`/home/repos`):
+To run the container with a project directory mounted into `/home/repos`:
 
 ```bash
-docker run -it \
-  -v ~/projects/myapp:/home/repos \
-  <image-name> \
-  bash
+docker run -it -v ~/projects/myapp:/home/repos <image-name> bash
 ```
 
-- Any edits you make in `/home/repos` inside the container will be saved back to `~/projects/myapp` on the host.  
-- If you **don’t want your changes to persist**, simply omit the `-v` flag.
-
-Tip: You can mount any directory you like by replacing `~/projects/myapp` with the path to your project folder. For example, to mount the current directory from your host into the container, run:
+* Changes in `/home/repos` persist back to `~/projects/myapp`.
+* Omit `-v` if you don’t want changes to persist.
+* To mount the current directory:
 
 ```bash
 docker run -it -v "$(pwd):/home/repos" <image-name> bash
 ```
 
-### Windows PowerShell
+#### Windows PowerShell
 
 ```powershell
 docker run -it `
@@ -39,7 +41,7 @@ docker run -it `
   bash
 ```
 
-### Windows Command Prompt
+#### Windows CMD
 
 ```cmd
 docker run -it ^
@@ -48,19 +50,99 @@ docker run -it ^
   bash
 ```
 
-### Permissions note
-Because the container runs as `root`, files created in the mounted directory may be owned by `root` on the host. If you want files to be owned by your host user, run the container with your host UID/GID (Linux/macOS):
+#### Permissions Note
 
-```bash
-docker run -it \
-  -v ~/projects/myapp:/home/repos \
-  -u $(id -u):$(id -g) \
-  <image-name> \
-  bash
-```
-
-Keep in mind that running as a non-root user inside the container may affect tools that expect root privileges (e.g., system-wide installs or tools with files in `/root`). If you hit permission issues, a quick fix is to `chown` the directory on the host after running:
+Because the container runs as root, files in the mounted directory may be owned by root. To fix ownership:
 
 ```bash
 sudo chown -R $(id -u):$(id -g) ~/projects/myapp
 ```
+
+---
+
+## 2. WSL2-Based Development Environment
+
+### Prerequisites
+
+* Windows 10/11 with **WSL2 enabled**.
+* Optional: Hyper-V enabled for VM builds.
+
+### Running the Non-GUI Setup
+
+1. Open a WSL2 terminal.
+2. Navigate to your project or any folder you want to host the environment.
+3. Run the setup script:
+
+```bash
+bash setup_dev_env.sh
+```
+
+* Installs Python, Node.js, .NET SDK, and sets up `~/repos`.
+
+### Running the GUI Setup (KDE + VNC/RDP)
+
+```bash
+bash setup_dev_kde_env.sh
+```
+
+* Installs KDE Plasma Desktop.
+* Starts a VNC server on `:1` (port 5901).
+* Starts xRDP on port 3389.
+* You can connect using:
+
+  * VNC client to `localhost:5901`
+  * RDP client to `localhost:3389`
+
+---
+
+## 3. Fully Automated Packer + WSL2 GUI VM
+
+### Prerequisites
+
+* Windows 10/11 with **WSL2** and **Hyper-V** enabled.
+* Packer installed.
+
+### Building the GUI WSL2 VM
+
+1. Place your GUI setup script (`setup_dev_kde_env.sh`) in the same directory.
+2. Run Packer:
+
+```powershell
+packer build packer_wsl_gui_auto.json
+```
+
+* This will:
+
+  * Download the Ubuntu ISO and verify checksum.
+  * Build a Hyper-V VM with Ubuntu.
+  * Run `setup_dev_kde_env.sh` to configure GUI, Python, Node, .NET.
+  * Import the VM as a WSL2 distro named `dev-ubuntu-gui` (or whatever you set in the template).
+
+### Running the GUI WSL2 Distro
+
+```powershell
+wsl -d dev-ubuntu-gui
+```
+
+* VNC: Connect to `localhost:5901`
+* RDP: Connect to `localhost:3389`
+
+### Notes
+
+* The VM will be fully self-contained; you can use `~/repos` for projects.
+* Clean up the temporary VHD after import if you need disk space.
+* For non-GUI use, use `setup_dev_env.sh` and skip VNC/RDP installation.
+
+---
+
+## Summary
+
+| Method              | Persistent? | GUI | Notes                                           |
+| ------------------- | ----------- | --- | ----------------------------------------------- |
+| Docker              | Optional    | No  | Lightweight, isolated, quick setup              |
+| WSL2 CLI            | Optional    | No  | Ideal for lightweight development and scripting |
+| WSL2 GUI via Packer | Yes         | Yes | Full desktop environment, connect via VNC/RDP   |
+
+---
+
+This README now covers **Docker**, **WSL CLI**, and **fully automated GUI WSL VM builds** for fresh Windows setups.

@@ -1,0 +1,42 @@
+{
+  "variables": {
+    "wsl_distro_name": "dev-ubuntu-gui",
+    "iso_url": "https://releases.ubuntu.com/24.04/ubuntu-24.04-live-server-amd64.iso",
+    "vm_name": "wsl_gui_vm",
+    "vm_memory": "4096",
+    "vm_disk": "40960",
+    "temp_vhd_path": "C:\\WSL\\temp_wsl_vm.vhdx"
+  },
+  "builders": [
+    {
+      "type": "hyperv-iso",
+      "iso_url": "{{user `iso_url`}}",
+      "iso_checksum_url": "{{user `iso_url`}}.sha256",
+      "communicator": "ssh",
+      "ssh_username": "packer",
+      "ssh_password": "packer",
+      "shutdown_command": "shutdown /s /t 10 /f /d p:2:4 /c \"Packer Shutdown\"",
+      "vm_name": "{{user `vm_name`}}",
+      "generation": 2,
+      "memory": "{{user `vm_memory`}}",
+      "disk_size": "{{user `vm_disk`}}"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "script": "setup_dev_kde_env.sh"
+    },
+    {
+      "type": "powershell",
+      "inline": [
+        "Write-Host 'Creating WSL import directory...'",
+        "New-Item -ItemType Directory -Force -Path C:\\WSL\\{{user `wsl_distro_name`}}",
+        "Write-Host 'Importing VHD into WSL2...'",
+        "wsl --import {{user `wsl_distro_name`}} C:\\WSL\\{{user `wsl_distro_name`}} {{user `temp_vhd_path`}} --version 2",
+        "Write-Host 'Listing WSL distros:'",
+        "wsl --list --verbose"
+      ]
+    }
+  ]
+}

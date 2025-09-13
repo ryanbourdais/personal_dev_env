@@ -1,0 +1,38 @@
+{
+  "variables": {
+    "client_id": "",
+    "client_secret": "",
+    "tenant_id": "",
+    "subscription_id": "",
+    "resource_group": "packer-images",
+    "image_name": "dev-ubuntu-24-04",
+    "location": "East US",
+    "ssh_password": "packer"
+  },
+  "builders": [
+    {
+      "type": "azure-arm",
+      "client_id": "{{user `client_id`}}",
+      "client_secret": "{{user `client_secret`}}",
+      "tenant_id": "{{user `tenant_id`}}",
+      "subscription_id": "{{user `subscription_id`}}",
+      "managed_image_resource_group_name": "{{user `resource_group`}}",
+      "managed_image_name": "{{user `image_name`}}",
+      "os_type": "Linux",
+      "image_publisher": "Canonical",
+      "image_offer": "0001-com-ubuntu-server-jammy",
+      "image_sku": "24_04-lts-gen2",
+      "location": "{{user `location`}}",
+      "vm_size": "Standard_B2s",
+      "communicator": "ssh",
+      "ssh_username": "packer",
+      "ssh_password": "{{user `ssh_password`}}"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "script": "setup_dev_env.sh"
+    }
+  ]
+}

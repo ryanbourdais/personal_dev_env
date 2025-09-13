@@ -1,0 +1,43 @@
+{
+  "variables": {
+    "wsl_distro_name": "dev-ubuntu",
+    "iso_url": "https://releases.ubuntu.com/24.04/ubuntu-24.04-live-server-amd64.iso",
+    "iso_checksum": "sha256:d6dab0c3a657988501b4bd76f1297c053df710e06e0c3aece60dead24f270b4d",
+    "vm_name": "packer-wsl-dev",
+    "disk_size": "20480",
+    "memory": "2048"
+  },
+  "builders": [
+    {
+      "type": "hyperv-iso",
+      "iso_url": "{{user `iso_url`}}",
+      "iso_checksum": "{{user `iso_checksum`}}",
+      "communicator": "ssh",
+      "ssh_username": "packer",
+      "ssh_password": "packer",
+      "ssh_timeout": "20m",
+      "shutdown_command": "shutdown /s /t 10 /f /d p:2:4 /c \"Packer Shutdown\"",
+      "vm_name": "{{user `vm_name`}}",
+      "generation": 2,
+      "memory": "{{user `memory`}}",
+      "disk_size": "{{user `disk_size`}}"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "script": "setup_dev_env.sh",
+      "environment_vars": [
+        "DEBIAN_FRONTEND=noninteractive"
+      ]
+    },
+    {
+      "type": "powershell",
+      "inline": [
+        "Write-Host 'Exporting VM to WSL2 distribution...'",
+        "wsl --import {{user `wsl_distro_name`}} C:\\WSL\\{{user `wsl_distro_name`}} C:\\path\\to\\packer-wsl-vhd.vhdx --version 2",
+        "wsl --list --verbose"
+      ]
+    }
+  ]
+}
