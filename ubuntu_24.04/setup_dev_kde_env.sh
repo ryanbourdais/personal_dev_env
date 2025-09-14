@@ -2,7 +2,7 @@
 set -e
 
 # ========================
-# GUI Setup Script for WSL2 / Packer
+# GUI + Dev Setup Script for WSL2 / Packer
 # ========================
 
 echo "=== Updating system and installing base packages ==="
@@ -31,21 +31,21 @@ sudo apt-get install -y \
     gnupg \
     x11-apps
 
-echo "=== Installing KDE Plasma Desktop, xRDP, and TightVNC ==="
+echo "=== Installing KDE Plasma Desktop, xRDP, and VNC ==="
 sudo apt-get install -y \
     kde-plasma-desktop \
     tightvncserver \
-    xrdp
+    xrdp \
+    xorgxrdp
 
 # ========================
-# VNC setup (non-interactive)
+# VNC setup
 # ========================
 echo "=== Configuring VNC ==="
-VNC_PASSWD="${VNC_PASSWORD:-packer}"  # default password 'packer', can be overridden
+VNC_PASSWD="${VNC_PASSWORD:-packer}"  # default 'packer', override with env
 mkdir -p ~/.vnc
 echo "$VNC_PASSWD" | vncpasswd -f > ~/.vnc/passwd
 chmod 600 ~/.vnc/passwd
-# Do not start VNC now; user can start at runtime:
 echo "To start VNC server at runtime, run:"
 echo "  vncserver :1 -geometry 1920x1080 -depth 24"
 
@@ -53,20 +53,31 @@ echo "  vncserver :1 -geometry 1920x1080 -depth 24"
 # xRDP setup
 # ========================
 echo "=== Configuring xRDP ==="
+# Ensure KDE starts in RDP sessions
+echo 'exec startplasma-x11' > ~/.xsession
+chmod +x ~/.xsession
+
+# Set a default password for the current user (testing only)
+USERNAME="$(whoami)"
+echo "${USERNAME}:packer" | sudo chpasswd
+
+# Enable xrdp if systemd is present (won’t break WSL if not)
 sudo systemctl enable xrdp || true
-# Do not start xRDP in Packer; user can start at runtime:
+
 echo "To start xRDP at runtime, run:"
 echo "  sudo service xrdp start"
-echo "Connect via RDP to localhost:3389"
+echo "Then connect via RDP to localhost:3389"
+echo "  username: $USERNAME"
+echo "  password: packer"
 
 # ========================
-# Optional directories for dev
+# Dev directories
 # ========================
 mkdir -p ~/repos
 echo "Created ~/repos for project code."
 
 # ========================
-# pyenv and Python setup
+# pyenv + Python
 # ========================
 PYTHON_VERSION="${PYTHON_VERSION:-3.13.7}"
 export PYENV_ROOT="$HOME/.pyenv"
@@ -75,18 +86,15 @@ export PATH="$PYENV_ROOT/bin:$PYENV_ROOT/shims:$PATH"
 echo "=== Installing pyenv and Python $PYTHON_VERSION ==="
 curl https://pyenv.run | bash
 
-# Add pyenv init to shell startup
 if ! grep -q 'pyenv init' ~/.bashrc; then
     echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.bashrc
     echo 'export PATH="$PYENV_ROOT/bin:$PYENV_ROOT/shims:$PATH"' >> ~/.bashrc
     echo 'eval "$(pyenv init -)"' >> ~/.bashrc
 fi
 
-# Source pyenv immediately
 export PATH="$PYENV_ROOT/bin:$PYENV_ROOT/shims:$PATH"
 eval "$(pyenv init -)"
 
-# Install Python
 pyenv install -s $PYTHON_VERSION
 pyenv global $PYTHON_VERSION
 
@@ -105,16 +113,13 @@ export NVM_DIR="$HOME/.nvm"
 mkdir -p $NVM_DIR
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | bash
 
-# Add NVM to shell startup
 if ! grep -q 'nvm.sh' ~/.bashrc; then
     echo 'export NVM_DIR="$HOME/.nvm"' >> ~/.bashrc
     echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> ~/.bashrc
 fi
 
-# Source NVM immediately
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
-# Install Node
 nvm install --lts
 nvm alias default lts/*
 
@@ -130,16 +135,20 @@ sudo apt-get update
 sudo apt-get install -y dotnet-sdk-8.0
 
 # ========================
-# Verify installations
+# Verify installs
 # ========================
-echo "=== Verifying installations ==="
+echo "=== Verifying installs ==="
 python --version
 python -m pip --version
 node -v
 npm -v
 dotnet --version
 
+# ========================
+# Done
+# ========================
 echo "=== Setup complete! ==="
 echo "Your code folder is at ~/repos"
-echo "Start VNC at runtime with: vncserver :1 -geometry 1920x1080 -depth 24"
-echo "Start xRDP at runtime with: sudo service xrdp start"
+echo "Start VNC: vncserver :1 -geometry 1920x1080 -depth 24"
+echo "Start RDP: sudo service xrdp start"
+echo "Connect RDP -> localhost:3389 (user: $USERNAME / password: packer)"

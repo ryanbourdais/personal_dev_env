@@ -99,39 +99,54 @@ bash setup_dev_kde_env.sh
 
 ### Prerequisites
 
-* Windows 10/11 with **WSL2** and **Hyper-V** enabled.
-* Packer installed.
+* Windows 10/11 with **WSL2** enabled.
+* [Packer](https://developer.hashicorp.com/packer/install) installed.
+* Hyper-V is **not required** for running the GUI with xRDP — this works on Windows Home editions too.
 
 ### Building the GUI WSL2 VM
 
-1. Place your GUI setup script (`setup_dev_kde_env.sh`) in the same directory.
+1. Place your GUI setup script (`setup_dev_kde_env.sh`) in the same directory as `packer_wsl_gui_dev_env.json`.
 2. Run Packer:
 
 ```powershell
-packer build packer_wsl_gui_auto.json
+packer build packer_wsl_gui_dev_env.json
 ```
 
 * This will:
 
   * Download the Ubuntu ISO and verify checksum.
   * Build a Hyper-V VM with Ubuntu.
-  * Run `setup_dev_kde_env.sh` to configure GUI, Python, Node, .NET.
+  * Run `setup_dev_kde_env.sh` to configure KDE Plasma, xRDP, VNC, Python, Node, and .NET.
   * Import the VM as a WSL2 distro named `dev-ubuntu-gui` (or whatever you set in the template).
 
 ### Running the GUI WSL2 Distro
+
+Start the WSL2 distro:
 
 ```powershell
 wsl -d dev-ubuntu-gui
 ```
 
-* VNC: Connect to `localhost:5901`
-* RDP: Connect to `localhost:3389`
+Then inside the distro:
+
+* To start **xRDP**:
+  ```bash
+  sudo service xrdp start
+  ```
+  Connect via RDP to `localhost:3389` using your Linux username (default: `packer`) and password (`packer`).
+
+* To start **VNC**:
+  ```bash
+  vncserver :1 -geometry 1920x1080 -depth 24
+  ```
+  Connect via VNC to `localhost:5901` with the password set during installation (default: `packer`).
 
 ### Notes
 
-* The VM will be fully self-contained; you can use `~/repos` for projects.
-* Clean up the temporary VHD after import if you need disk space.
-* For non-GUI use, use `setup_dev_env.sh` and skip VNC/RDP installation.
+* GUI services (RDP/VNC) do **not** auto-start in WSL2. You must start them manually after launching the distro.
+* Use `~/repos` inside WSL for your project code.
+* For non-GUI use, run `setup_dev_env.sh` instead of `setup_dev_kde_env.sh`.
+* After import, you may safely delete the intermediate Hyper-V VHD to reclaim disk space.
 
 ---
 
